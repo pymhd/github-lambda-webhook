@@ -39,17 +39,16 @@ func PostHandler(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRespo
 	if !ok {
 		//this request is not from github
 		log.Error("Got request without github secret header, exit")
-		return genResponse(501, "You are not GitHub")
+		return genResponse(http.StatusForbidden, http.StatusText(http.StatusForbidden))
 	}
 	if secret != os.Getenv("SECRET") {
 		log.Error("Secert in header does not match secret specifired in aws lambda func")
-		return genResponse(501, "You are not GitHub")
+		return genResponse(http.StatusForbidden, http.StatusText(http.StatusForbidden))
 	}
 	payload := new(PullRequestPayload)
 	if err := json.NewDecoder(strings.NewReader(req.Body)).Decode(payload); err != nil {
 		log.Errorf("Could not parse json payload (%s)", err)
 		return genResponse(http.StatusInternalServerError, http.StatusText(http.StatusInternalServerError))
-
 	}
 
 	log.Debugf("Invoked by action: %s, pull request number: %d, pull request ref: %s, sha: %s by login: %s\n", payload.Action, payload.PullRequest.Number, payload.PullRequest.Head.Ref, payload.PullRequest.Head.Sha, payload.Sender.Login)
@@ -95,16 +94,16 @@ func PostHandler(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRespo
 				}
 			default:
 				log.Warning("Labeled action with unknown label name, skipping...")
-				return genResponse(200, "Wrong label")
+				return genResponse(http.StatusOK, "Unsupported label received")
 			}
 		}
 		if err := triggerBambooEndpoint(payload); err != nil {
 			log.Error(err)
-			return genResponse(200, "Unsupported project")
+			return genResponse(http.StatusOK, err.Error())
 		}
-		return genResponse(200, "bamboo was invoked")
+		return genResponse(http.StatusOK, "bamboo was invoked")
 	}
-	return genResponse(200, "Unsupported action")
+	return genResponse(http.StatusOK, "Unsupported action")
 }
 
 func triggerBambooEndpoint(p *PullRequestPayload) error {
