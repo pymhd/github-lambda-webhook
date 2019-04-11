@@ -1,8 +1,9 @@
 package main
 
 type Repo struct {
-	ID       int    `json:"id"`
-	FullName string `json:"full_name"`
+	ID        int    `json:"id"`
+	FullName  string `json:"full_name"`
+	ShortName string `json:"name"`
 }
 
 type Branch struct {

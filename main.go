@@ -208,6 +208,11 @@ func makeBambooPostReq(plan string, p *PullRequestPayload) error {
 	//return s
 }
 
+//func projectExists(k string) bool {
+//	return len(os.GetEnv(k) > 0)
+//}
+
+
 func main() {
 	lambda.Start(PostHandler)
 }
