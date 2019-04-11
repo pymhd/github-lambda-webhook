@@ -1,0 +1,40 @@
+{
+	"ImportPath": "bamboo-middleware",
+	"GoVersion": "go1.12",
+	"GodepVersion": "v80",
+	"Deps": [
+		{
+			"ImportPath": "github.com/aws/aws-lambda-go/events",
+			"Comment": "v1.10.0",
+			"Rev": "08d251dc58f204411d79012fd6f1beefb7107fea"
+		},
+		{
+			"ImportPath": "github.com/aws/aws-lambda-go/lambda",
+			"Comment": "v1.10.0",
+			"Rev": "08d251dc58f204411d79012fd6f1beefb7107fea"
+		},
+		{
+			"ImportPath": "github.com/aws/aws-lambda-go/lambda/handlertrace",
+			"Comment": "v1.10.0",
+			"Rev": "08d251dc58f204411d79012fd6f1beefb7107fea"
+		},
+		{
+			"ImportPath": "github.com/aws/aws-lambda-go/lambda/messages",
+			"Comment": "v1.10.0",
+			"Rev": "08d251dc58f204411d79012fd6f1beefb7107fea"
+		},
+		{
+			"ImportPath": "github.com/aws/aws-lambda-go/lambdacontext",
+			"Comment": "v1.10.0",
+			"Rev": "08d251dc58f204411d79012fd6f1beefb7107fea"
+		},
+		{
+			"ImportPath": "github.com/pymhd/go-logging",
+			"Rev": "5db4478212a046865ee9237a258941741e56d90c"
+		},
+		{
+			"ImportPath": "github.com/pymhd/go-logging/handlers",
+			"Rev": "5db4478212a046865ee9237a258941741e56d90c"
+		}
+	]
+}
