@@ -1,23 +1,25 @@
 package main
 
 import (
-	"os"
-	"fmt"
-	"strconv"
-        "strings"
-	"net/http"
+	"crypto/hmac"
+	"crypto/sha1"
 	_ "crypto/tls"
+	"encoding/hex"
 	"encoding/json"
-	
+	"fmt"
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
-	
+	"net/http"
+	"os"
+	"strconv"
+	"strings"
+
 	"github.com/pymhd/go-logging"
 	"github.com/pymhd/go-logging/handlers"
 )
 
 const (
-	gitSecretHeader   = "x-hub-signature"
+	gitSecretHeader   = "X-Hub-Signature"
 	BambooUserName    = "bambooUserName"
 	BambooPassword    = "BambooPassword"
 	BambooURL         = "https://bamboo.com/path/to/api/"
@@ -26,11 +28,11 @@ const (
 )
 
 var (
-	labelMap        = make(map[string]bool, 0)
-	allowedActions  = map[string]bool{"opened": true, "labeled": true, "reopened": true, "synchronize": true}
-	projectMap      = map[string]string{"lynx": "AM", "lynx-ru": "AER", "lynx-in": "AEI", "go-simple-cache": "MHD"}
-	postfixMap      = map[string]string{"init": "RTIO", "initLite": "RTILTO", "build": "RTBTO", "sonar": "RTSTO", "spring": "RTSCTO", "integration": "RTITO", "uiUnit": "RTUUTO", "unitWeb": "RTUWTO", "update": "RTUTO", "intLite": "RTILO"}
-	log             = logger.New("main", handlers.StreamHandler{}, logger.DEBUG, logger.OLEVEL)
+	labelMap       = make(map[string]bool, 0)
+	allowedActions = map[string]bool{"opened": true, "labeled": true, "reopened": true, "synchronize": true}
+	projectMap     = map[string]string{"AmwayEIA/lynx": "AM", "AmwayEIA/lynx-ru": "AER", "AmwayEIA/lynx-in": "AEI"}
+	postfixMap     = map[string]string{"init": "RTIO", "initLite": "RTILTO", "build": "RTBTO", "sonar": "RTSTO", "spring": "RTSCTO", "integration": "RTITO", "uiUnit": "RTUUTO", "unitWeb": "RTUWTO", "update": "RTUTO", "intLite": "RTILO"}
+	log            = logger.New("main", handlers.StreamHandler{}, logger.DEBUG, logger.OLEVEL)
 	//log             = logger.New("main", handlers.StreamHandler{}, logger.DEBUG, logger.OLEVEL|logger.OTIME|logger.OFILE|logger.OCOLOR)
 )
 
@@ -44,12 +46,15 @@ func PostHandler(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRespo
 		// return 403 status code with text Forbidden (see net/http constants in godoc)
 		return genResponse(http.StatusForbidden, http.StatusText(http.StatusForbidden))
 	}
-	if secret != os.Getenv("SECRET") {
+	signature := getSignature(req.Body, os.Getenv("SECRET"))
+	if secret != signature {
 		log.Error("Secert in header does not match secret specifired in aws lambda func")
-		// return the same as if there was no secret, see above comments 
-		return genResponse(http.StatusForbidden, http.StatusText(http.StatusForbidden))
+		log.Warningf("%s != %s", secret, signature)
+		//eBaijeeh7osh2saequiez7coh1wenaeg
+		// return the same as if there was no secret, see above comments
+		//return genResponse(http.StatusForbidden, http.StatusText(http.StatusForbidden))
 	}
-	// create new pointer to PullRequestPayload obj See types.go file for the structure 
+	// create new pointer to PullRequestPayload obj See types.go file for the structure
 	payload := new(PullRequestPayload)
 	if err := json.NewDecoder(strings.NewReader(req.Body)).Decode(payload); err != nil {
 		log.Errorf("Could not parse json payload (%s)", err)
@@ -104,7 +109,7 @@ func PostHandler(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRespo
 				}
 			default:
 				// so there are some unknown labels
-				// we will accept query but wont invoke any bamboo endpoints 
+				// we will accept query but wont invoke any bamboo endpoints
 				log.Warning("Labeled action with unknown label name, skipping...")
 				return genResponse(http.StatusOK, "Unsupported label received")
 			}
@@ -175,12 +180,19 @@ func genResponse(code int, body string) (events.APIGatewayProxyResponse, error) 
 	return response, nil
 }
 
+func getSignature(input, key string) string {
+	key_for_sign := []byte(key)
+	h := hmac.New(sha1.New, key_for_sign)
+	h.Write([]byte(input))
+	return "sha1=" + hex.EncodeToString(h.Sum(nil))
+}
+
 func makeBambooPostReq(plan string, p *PullRequestPayload) error {
 	//create insecure transport (requests.post(verify = False) in python )
 	//insecureTransport := &http.Transport{TLSClientConfig: &tls.Config{InsecureSkipVerify: true}}
 	//client := &http.Client{Transport: insecureTransport}
 	pullNum := strconv.Itoa(p.PullRequest.Number)
-	req, err := http.NewRequest("POST", BambooURL + plan, nil)
+	req, err := http.NewRequest("POST", BambooURL+plan, nil)
 	if err != nil {
 		// not really sure if why this could ever faile but anyway
 		log.Error(err)
@@ -196,7 +208,7 @@ func makeBambooPostReq(plan string, p *PullRequestPayload) error {
 	q.Add("bamboo.variable.pull_base_ref", p.PullRequest.Base.Ref)
 	q.Add("bamboo.variable.pull_sha", p.PullRequest.Head.Sha)
 	req.URL.RawQuery = q.Encode()
-	// 
+	//
 	log.Debugf("Bamboo will be triggered: %s\n", req.URL)
 	return nil
 	//resp, err := client.Do(req)
@@ -211,7 +223,6 @@ func makeBambooPostReq(plan string, p *PullRequestPayload) error {
 //func projectExists(k string) bool {
 //	return len(os.GetEnv(k) > 0)
 //}
-
 
 func main() {
 	lambda.Start(PostHandler)
